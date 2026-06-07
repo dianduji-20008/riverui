@@ -2,6 +2,9 @@
 
 River UI is a graphical user interface for the [River job queue](https://github.com/riverqueue/river). It lets users view and manage jobs without having to resort to querying the database or the command line.
 
+The Limits page shows configured River claim-time limit rules and observed job
+counts by limit metadata key and queue.
+
 A [live demo of River UI](https://ui.riverqueue.com) is available to see what it looks like.
 
 ## Installation

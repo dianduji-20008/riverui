@@ -11,6 +11,7 @@ import {
   CalendarDaysIcon,
   Cog6ToothIcon,
   InboxStackIcon,
+  PresentationChartLineIcon,
   QueueListIcon,
   RectangleGroupIcon,
   XMarkIcon,
@@ -35,6 +36,7 @@ const Layout = ({ children }: LayoutProps) => {
           search: {},
         },
         { href: "/queues", icon: InboxStackIcon, name: "Queues" },
+        { href: "/limits", icon: PresentationChartLineIcon, name: "Limits" },
         {
           hidden: !features.workflowQueries,
           href: "/workflows",
