@@ -7,11 +7,11 @@ toolchain go1.25.7
 require (
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/riverqueue/apiframe v0.0.0-20251229202423-2b52ce1c482e
-	github.com/riverqueue/river v0.39.0
-	github.com/riverqueue/river/riverdriver v0.39.0
-	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.39.0
-	github.com/riverqueue/river/rivershared v0.39.0
-	github.com/riverqueue/river/rivertype v0.39.0
+	github.com/riverqueue/river v0.39.1-limits.0
+	github.com/riverqueue/river/riverdriver v0.39.1-limits.0
+	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.39.1-limits.0
+	github.com/riverqueue/river/rivershared v0.39.1-limits.0
+	github.com/riverqueue/river/rivertype v0.39.1-limits.0
 	github.com/rs/cors v1.11.1
 	github.com/samber/slog-http v1.12.1
 	github.com/stretchr/testify v1.11.1
@@ -45,11 +45,11 @@ require (
 )
 
 replace (
-	github.com/riverqueue/river => ../river
-	github.com/riverqueue/river/riverdriver => ../river/riverdriver
-	github.com/riverqueue/river/riverdriver/riverpgxv5 => ../river/riverdriver/riverpgxv5
-	github.com/riverqueue/river/rivershared => ../river/rivershared
-	github.com/riverqueue/river/rivertype => ../river/rivertype
+	github.com/riverqueue/river => github.com/dianduji-20008/river v0.39.1-limits.0
+	github.com/riverqueue/river/riverdriver => github.com/dianduji-20008/river/riverdriver v0.39.1-limits.0
+	github.com/riverqueue/river/riverdriver/riverpgxv5 => github.com/dianduji-20008/river/riverdriver/riverpgxv5 v0.39.1-limits.0
+	github.com/riverqueue/river/rivershared => github.com/dianduji-20008/river/rivershared v0.39.1-limits.0
+	github.com/riverqueue/river/rivertype => github.com/dianduji-20008/river/rivertype v0.39.1-limits.0
 )
 
 retract (

@@ -5,6 +5,9 @@ River UI is a graphical user interface for the [River job queue](https://github.
 The Limits page shows configured River claim-time limit rules and observed job
 counts by limit metadata key and queue.
 
+For this fork's Chinese documentation, see [River 限流扩展中文说明](limits.zh-CN.md)
+and [项目说明](project.zh-CN.md).
+
 A [live demo of River UI](https://ui.riverqueue.com) is available to see what it looks like.
 
 ## Installation
