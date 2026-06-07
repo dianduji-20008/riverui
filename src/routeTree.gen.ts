@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from "./routes/__root"
 import { Route as SettingsRouteImport } from "./routes/settings"
 import { Route as QueuesRouteImport } from "./routes/queues"
+import { Route as LimitsRouteImport } from "./routes/limits"
 import { Route as JobsRouteImport } from "./routes/jobs"
 import { Route as IndexRouteImport } from "./routes/index"
 import { Route as WorkflowsIndexRouteImport } from "./routes/workflows/index"
@@ -30,6 +31,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const QueuesRoute = QueuesRouteImport.update({
   id: "/queues",
   path: "/queues",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LimitsRoute = LimitsRouteImport.update({
+  id: "/limits",
+  path: "/limits",
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsRoute = JobsRouteImport.update({
@@ -86,6 +92,7 @@ const AboutAboutRoute = AboutAboutRouteImport.update({
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
   "/jobs": typeof JobsRouteWithChildren
+  "/limits": typeof LimitsRoute
   "/queues": typeof QueuesRouteWithChildren
   "/settings": typeof SettingsRoute
   "/about/about": typeof AboutAboutRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
+  "/limits": typeof LimitsRoute
   "/settings": typeof SettingsRoute
   "/about/about": typeof AboutAboutRoute
   "/jobs/$jobId": typeof JobsJobIdRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   "/": typeof IndexRoute
   "/jobs": typeof JobsRouteWithChildren
+  "/limits": typeof LimitsRoute
   "/queues": typeof QueuesRouteWithChildren
   "/settings": typeof SettingsRoute
   "/about/about": typeof AboutAboutRoute
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
   fullPaths:
     | "/"
     | "/jobs"
+    | "/limits"
     | "/queues"
     | "/settings"
     | "/about/about"
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | "/"
+    | "/limits"
     | "/settings"
     | "/about/about"
     | "/jobs/$jobId"
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | "__root__"
     | "/"
     | "/jobs"
+    | "/limits"
     | "/queues"
     | "/settings"
     | "/about/about"
@@ -170,6 +182,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   JobsRoute: typeof JobsRouteWithChildren
+  LimitsRoute: typeof LimitsRoute
   QueuesRoute: typeof QueuesRouteWithChildren
   SettingsRoute: typeof SettingsRoute
   AboutAboutRoute: typeof AboutAboutRoute
@@ -192,6 +205,13 @@ declare module "@tanstack/react-router" {
       path: "/queues"
       fullPath: "/queues"
       preLoaderRoute: typeof QueuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/limits": {
+      id: "/limits"
+      path: "/limits"
+      fullPath: "/limits"
+      preLoaderRoute: typeof LimitsRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/jobs": {
@@ -295,6 +315,7 @@ const QueuesRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   JobsRoute: JobsRouteWithChildren,
+  LimitsRoute: LimitsRoute,
   QueuesRoute: QueuesRouteWithChildren,
   SettingsRoute: SettingsRoute,
   AboutAboutRoute: AboutAboutRoute,

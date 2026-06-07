@@ -392,6 +392,76 @@ func (a *jobGetEndpoint[TTx]) Execute(ctx context.Context, req *jobGetRequest) (
 }
 
 //
+// limitListEndpoint
+//
+
+type limitListEndpoint[TTx any] struct {
+	apibundle.APIBundle[TTx]
+	apiendpoint.Endpoint[limitListRequest, limitListResponse]
+}
+
+func newLimitListEndpoint[TTx any](bundle apibundle.APIBundle[TTx]) *limitListEndpoint[TTx] {
+	return &limitListEndpoint[TTx]{APIBundle: bundle}
+}
+
+func (*limitListEndpoint[TTx]) Meta() *apiendpoint.EndpointMeta {
+	return &apiendpoint.EndpointMeta{
+		Pattern:    "GET /api/limits",
+		StatusCode: http.StatusOK,
+	}
+}
+
+type limitListRequest struct {
+	MetadataKey   *string `json:"-" validate:"omitempty,min=1"`           // from ExtractRaw
+	RecentSeconds *int    `json:"-" validate:"omitempty,min=0,max=86400"` // from ExtractRaw
+}
+
+func (req *limitListRequest) ExtractRaw(r *http.Request) error {
+	if metadataKey := r.URL.Query().Get("metadata_key"); metadataKey != "" {
+		req.MetadataKey = &metadataKey
+	}
+
+	if recentSecondsStr := r.URL.Query().Get("recent_seconds"); recentSecondsStr != "" {
+		recentSeconds, err := strconv.Atoi(recentSecondsStr)
+		if err != nil {
+			return apierror.NewBadRequestf("Couldn't convert `recent_seconds` to integer: %s.", err)
+		}
+		req.RecentSeconds = &recentSeconds
+	}
+
+	return nil
+}
+
+func (a *limitListEndpoint[TTx]) Execute(ctx context.Context, req *limitListRequest) (*limitListResponse, error) {
+	metadataKey := ptrutil.ValOrDefault(req.MetadataKey, a.Client.LimitMetadataKey())
+	recentSeconds := ptrutil.ValOrDefault(req.RecentSeconds, 60)
+	recentSince := ptrutil.Ptr(time.Now().Add(-time.Duration(recentSeconds) * time.Second))
+
+	return dbutil.WithTxV(ctx, a.DB, func(ctx context.Context, execTx riverdriver.ExecutorTx) (*limitListResponse, error) {
+		tx := a.Driver.UnwrapTx(execTx)
+
+		stats, err := a.Driver.UnwrapExecutor(tx).JobLimitStatsList(ctx, &riverdriver.JobLimitStatsListParams{
+			MetadataKey: metadataKey,
+			RecentSince: recentSince,
+			Schema:      a.Client.Schema(),
+		})
+		if errors.Is(err, riverdriver.ErrNotImplemented) {
+			stats = nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error listing limit stats: %w", err)
+		}
+
+		return &limitListResponse{
+			MetadataKey:   metadataKey,
+			RecentSeconds: recentSeconds,
+			Rules:         sliceutil.Map(a.Client.LimitRules(), riverLimitRuleToSerializableLimitRule),
+			Stats:         sliceutil.Map(stats, riverLimitStatsToSerializableLimitStats),
+		}, nil
+	})
+}
+
+//
 // jobListEndpoint
 //
 
@@ -964,6 +1034,53 @@ type RiverJob struct {
 
 	Errors   []rivertype.AttemptError `json:"errors"`
 	Metadata json.RawMessage          `json:"metadata"`
+}
+
+type RiverLimitStats struct {
+	Key          string `json:"key"`
+	Queue        string `json:"queue"`
+	Available    int    `json:"available"`
+	Running      int    `json:"running"`
+	RecentStarts int    `json:"recent_starts"`
+}
+
+type RiverLimitRule struct {
+	Key                string `json:"key"`
+	Scope              string `json:"scope"`
+	MaxRunning         int    `json:"max_running"`
+	MaxStartsPerPeriod int    `json:"max_starts_per_period"`
+	PeriodSeconds      int    `json:"period_seconds"`
+}
+
+type limitListResponse struct {
+	MetadataKey   string             `json:"metadata_key"`
+	RecentSeconds int                `json:"recent_seconds"`
+	Rules         []*RiverLimitRule  `json:"rules"`
+	Stats         []*RiverLimitStats `json:"stats"`
+}
+
+func riverLimitRuleToSerializableLimitRule(rule river.LimitRule) *RiverLimitRule {
+	scope := rule.Scope
+	if scope == "" {
+		scope = river.LimitScopeGlobal
+	}
+	return &RiverLimitRule{
+		Key:                rule.Key,
+		Scope:              string(scope),
+		MaxRunning:         rule.MaxRunning,
+		MaxStartsPerPeriod: rule.MaxStartsPerPeriod,
+		PeriodSeconds:      int(rule.Period.Seconds()),
+	}
+}
+
+func riverLimitStatsToSerializableLimitStats(stats *riverdriver.JobLimitStats) *RiverLimitStats {
+	return &RiverLimitStats{
+		Key:          stats.Key,
+		Queue:        stats.Queue,
+		Available:    stats.Available,
+		Running:      stats.Running,
+		RecentStarts: stats.RecentStarts,
+	}
 }
 
 func riverJobToSerializableJob(riverJob *rivertype.JobRow) *RiverJob {

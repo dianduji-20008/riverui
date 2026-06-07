@@ -108,6 +108,7 @@ func (e *endpoints[TTx]) MountEndpoints(archetype *baseservice.Archetype, logger
 		apiendpoint.Mount(mux, newJobCancelEndpoint(bundle), mountOpts),
 		apiendpoint.Mount(mux, newJobDeleteEndpoint(bundle), mountOpts),
 		apiendpoint.Mount(mux, newJobGetEndpoint(bundle), mountOpts),
+		apiendpoint.Mount(mux, newLimitListEndpoint(bundle), mountOpts),
 		apiendpoint.Mount(mux, newJobListEndpoint(bundle), mountOpts),
 		apiendpoint.Mount(mux, newJobRetryEndpoint(bundle), mountOpts),
 		apiendpoint.Mount(mux, newQueueGetEndpoint(bundle), mountOpts),

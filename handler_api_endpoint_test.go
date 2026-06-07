@@ -40,6 +40,10 @@ func setupEndpoint[TEndpoint any](ctx context.Context, t *testing.T, initFunc fu
 }
 
 func setupEndpointWithOpts[TEndpoint any](ctx context.Context, t *testing.T, initFunc func(bundle apibundle.APIBundle[pgx.Tx]) *TEndpoint, opts *riverdbtest.TestTxOpts) (*TEndpoint, *setupEndpointTestBundle) {
+	return setupEndpointWithOptsAndConfig(ctx, t, initFunc, opts, &river.Config{})
+}
+
+func setupEndpointWithOptsAndConfig[TEndpoint any](ctx context.Context, t *testing.T, initFunc func(bundle apibundle.APIBundle[pgx.Tx]) *TEndpoint, opts *riverdbtest.TestTxOpts, config *river.Config) (*TEndpoint, *setupEndpointTestBundle) {
 	t.Helper()
 
 	var (
@@ -49,9 +53,8 @@ func setupEndpointWithOpts[TEndpoint any](ctx context.Context, t *testing.T, ini
 		exec   = driver.UnwrapExecutor(tx)
 	)
 
-	client, err := river.NewClient(driver, &river.Config{
-		Logger: logger,
-	})
+	config.Logger = logger
+	client, err := river.NewClient(driver, config)
 	require.NoError(t, err)
 
 	endpoint := initFunc(apibundle.APIBundle[pgx.Tx]{
@@ -74,6 +77,74 @@ func setupEndpointWithOpts[TEndpoint any](ctx context.Context, t *testing.T, ini
 		logger: logger,
 		tx:     tx,
 	}
+}
+
+func TestAPIHandlerLimitList(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
+
+		endpoint, bundle := setupEndpointWithOptsAndConfig(ctx, t, newLimitListEndpoint, nil, &river.Config{
+			LimitRules: []river.LimitRule{
+				{
+					Key:                "wan2.2",
+					Scope:              river.LimitScopeQueue,
+					MaxRunning:         10,
+					MaxStartsPerPeriod: 2,
+					Period:             time.Second,
+				},
+			},
+		})
+
+		now := time.Now()
+		testfactory.Job(ctx, t, bundle.exec, &testfactory.JobOpts{
+			AttemptedAt: ptrutil.Ptr(now.Add(-30 * time.Second)),
+			Metadata:    []byte(`{"limit_key":"wan2.2"}`),
+			Queue:       ptrutil.Ptr("wan2.2"),
+			State:       ptrutil.Ptr(rivertype.JobStateRunning),
+		})
+		testfactory.Job(ctx, t, bundle.exec, &testfactory.JobOpts{
+			Metadata: []byte(`{"limit_key":"wan2.2"}`),
+			Queue:    ptrutil.Ptr("wan2.2"),
+			State:    ptrutil.Ptr(rivertype.JobStateAvailable),
+		})
+		testfactory.Job(ctx, t, bundle.exec, &testfactory.JobOpts{
+			AttemptedAt: ptrutil.Ptr(now.Add(-2 * time.Minute)),
+			FinalizedAt: ptrutil.Ptr(now.Add(-2 * time.Minute)),
+			Metadata:    []byte(`{"limit_key":"wan2.2"}`),
+			Queue:       ptrutil.Ptr("wan2.2"),
+			State:       ptrutil.Ptr(rivertype.JobStateCompleted),
+		})
+
+		recentSeconds := 60
+		resp, err := apitest.InvokeHandler(ctx, endpoint.Execute, testMountOpts(t), &limitListRequest{
+			RecentSeconds: &recentSeconds,
+		})
+		require.NoError(t, err)
+
+		require.Equal(t, "limit_key", resp.MetadataKey)
+		require.Equal(t, 60, resp.RecentSeconds)
+		require.Len(t, resp.Rules, 1)
+		require.Equal(t, &RiverLimitRule{
+			Key:                "wan2.2",
+			Scope:              "queue",
+			MaxRunning:         10,
+			MaxStartsPerPeriod: 2,
+			PeriodSeconds:      1,
+		}, resp.Rules[0])
+
+		require.Len(t, resp.Stats, 1)
+		require.Equal(t, &RiverLimitStats{
+			Key:          "wan2.2",
+			Queue:        "wan2.2",
+			Available:    1,
+			Running:      1,
+			RecentStarts: 1,
+		}, resp.Stats[0])
+	})
 }
 
 func testMountOpts(t *testing.T) *apiendpoint.MountOpts {
