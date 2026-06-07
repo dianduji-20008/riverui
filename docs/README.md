@@ -8,6 +8,8 @@ counts by limit metadata key and queue.
 For this fork's Chinese documentation, see [River 限流扩展中文说明](limits.zh-CN.md)
 and [项目说明](project.zh-CN.md).
 
+The Chinese documentation index is available at [River UI 中文说明](README.zh-CN.md).
+
 A [live demo of River UI](https://ui.riverqueue.com) is available to see what it looks like.
 
 ## Installation
